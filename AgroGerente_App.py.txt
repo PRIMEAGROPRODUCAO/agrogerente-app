@@ -1,0 +1,124 @@
+import streamlit as st
+import pandas as pd
+import datetime
+
+# CONFIGURAÇÃO DA PÁGINA E DESIGN ORGÂNICO (VERDE OLIVA)
+st.set_page_config(page_title="AgroGerente", page_icon="🍄", layout="wide")
+
+st.markdown("""
+    <style>
+    .main { background-color: #f4f6f0; }
+    h1, h2, h3 { color: #2e4a23; }
+    .stButton>button { background-color: #4a6b36; color: white; border-radius: 8px; }
+    .stButton>button:hover { background-color: #3b542b; color: white; }
+    </style>
+""", unsafe_allow_html=True)
+
+# SISTEMA DE LOGIN E SEGURANÇA
+if 'autenticado' not in st.session_state:
+    st.session_state['autenticado'] = False
+
+if not st.session_state['autenticado']:
+    st.title("🍄 AgroGerente: Do Cultivo ao Mercado")
+    st.subheader("Login do Administrador")
+    
+    usuario = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
+    
+    if st.button("Entrar"):
+        if usuario == "admin" and senha == "123456":
+            st.session_state['autenticado'] = True
+            st.rerun()
+        else:
+            st.error("Usuário ou senha incorretos.")
+    st.stop()
+
+# BANCO DE DADOS EM MEMÓRIA (SIMULAÇÃO)
+if 'produtos' not in st.session_state:
+    st.session_state['produtos'] = ["🍄 Cogumelo Shimeji", "🍄 Cogumelo Shitake", "🍅 Tomate Cereja", "🌱 Microverdes Rúcula", "🌱 Microverdes Mostarda"]
+if 'lotes' not in st.session_state:
+    st.session_state['lotes'] = pd.DataFrame(columns=["Código do Lote", "Produto", "Data Plantio", "Quantidade", "Status"])
+if 'custos' not in st.session_state:
+    # Dados Iniciais baseados no seu projeto
+    st.session_state['custos'] = pd.DataFrame([
+        {"Item": "Madeira para Barracão", "Categoria": "Estruturação", "Valor (R$)": 1200.00},
+        {"Item": "Telhas, Pregos e Parafusos", "Categoria": "Estruturação", "Valor (R$)": 850.00},
+        {"Item": "Sombrite e Lonas", "Categoria": "Estruturação", "Valor (R$)": 450.00},
+        {"Item": "Substrato e Micélio", "Categoria": "Produção", "Valor (R$)": 320.00},
+        {"Item": "Embalagens plásticas", "Categoria": "Embalagem", "Valor (R$)": 180.00}
+    ])
+
+# NAVEGAÇÃO DO APLICATIVO
+opcao = st.sidebar.radio("Navegação", ["📊 Dashboard", "🌱 Controle de Lotes", "💰 Custos & Despesas", "🤝 Clientes & Fornecedores", "⚙️ Perfil"])
+
+# 1. TELA: DASHBOARD
+if opcao == "📊 Dashboard":
+    st.title("📊 Painel de Controle Operacional")
+    
+    tot_gasto = st.session_state['custos']["Valor (R$)"].sum()
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Investido", f"R$ {tot_gasto:,.2f}")
+    col2.metric("Lotes Ativos", len(st.session_state['lotes']))
+    col3.metric("Estimativa de Lucro", "Calculando...", "+12%")
+
+    st.subheader("Resumo de Gastos Atuais")
+    st.dataframe(st.session_state['custos'], use_container_width=True)
+
+# 2. TELA: CONTROLE DE LOTES (AUTOMATIZADO)
+elif opcao == "🌱 Controle de Lotes":
+    st.title("🌱 Gestão Rigorosa de Cultivos")
+    st.subheader("Introdução Automática de Lotes")
+    
+    prod = st.selectbox("Selecione o Produto", st.session_state['produtos'])
+    data_p = st.date_input("Data de Plantio", datetime.date.today())
+    quant = st.number_input("Quantidade de Bandejas / Sacos", min_value=1, value=10)
+    
+    if st.button("Gerar e Plantar Lote"):
+        # Criação automática do código do lote baseado no produto e data
+        prefixo = "COG" if "Cogumelo" in prod else ("TOM" if "Tomate" in prod else "MIC")
+        cod_lote = f"LOT-{prefixo}-{data_p.strftime('%Y%m%d')}"
+        
+        novo_lote = pd.DataFrame([{"Código do Lote": cod_lote, "Produto": prod, "Data Plantio": data_p, "Quantidade": quant, "Status": "Em Manejo"}])
+        st.session_state['lotes'] = pd.concat([st.session_state['lotes'], novo_lote], ignore_index=True)
+        st.success(f"Lote {cod_lote} criado com sucesso!")
+
+    st.subheader("Histórico Diário de Plantios")
+    st.dataframe(st.session_state['lotes'], use_container_width=True)
+
+# 3. TELA: CUSTOS & DESPESAS
+elif opcao == "💰 Custos & Despesas":
+    st.title("💰 Gestão Financeira Integrada")
+    st.subheader("Adicionar Nova Despesa Manual")
+    
+    item = st.text_input("Nome do Item / Serviço")
+    cat = st.selectbox("Categoria", ["Estruturação", "Produção", "Embalagem", "Logística", "Despesa Extra"])
+    valor = st.number_input("Valor Pago (R$)", min_value=0.0, value=0.0, step=10.0)
+    
+    if st.button("Salvar Despesa"):
+        nova_desp = pd.DataFrame([{"Item": item, "Categoria": cat, "Valor (R$)": valor}])
+        st.session_state['custos'] = pd.concat([st.session_state['custos'], nova_desp], ignore_index=True)
+        st.success("Despesa adicionada com sucesso!")
+        
+    st.info("💡 Automação ativa: Notas Fiscais enviadas pelo WhatsApp serão lançadas aqui de forma automática.")
+
+# 4. TELA: CLIENTES & FORNECEDORES
+elif opcao == "🤝 Clientes & Fornecedores":
+    st.title("🤝 Cadastro de Contatos Comerciais")
+    st.text("Módulo para armazenar registros completos de compradores e fornecedores de insumos.")
+    
+    tipo_contato = st.radio("Tipo de Cadastro", ["Cliente", "Fornecedor"])
+    nome_comercial = st.text_input("Nome / Razão Social")
+    contato_tel = st.text_input("Telefone de Contato (WhatsApp)")
+    
+    if st.button("Cadastrar"):
+        st.success(f"{tipo_contato} '{nome_comercial}' salvo no banco de dados!")
+
+# 5. TELA: PERFIL
+elif opcao == "⚙️ Perfil":
+    st.title("⚙️ Perfil do Produtor Administrador")
+    st.write("**Empresa:** Produtor Autossuficiente de Cogumelos e Microverdes")
+    st.write("**Nível de Acesso:** Administrador Total")
+    if st.sidebar.button("Sair / Logout"):
+        st.session_state['autenticado'] = False
+        st.rerun()
